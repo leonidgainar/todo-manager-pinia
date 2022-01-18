@@ -13,12 +13,11 @@
   </span>
 </template>
 
-<script>
-export default {
-  props: {
-    status: {
-      type: Boolean
-    }
+<script setup>
+import { defineProps } from "vue";
+defineProps({
+  status: {
+    type: Boolean
   }
-};
+});
 </script>

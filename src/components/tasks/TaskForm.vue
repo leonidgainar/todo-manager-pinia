@@ -10,7 +10,12 @@
           type="text"
           v-model.trim="title"
           placeholder="Enter the title"
-          :rules="{ required: true, min: 3, max: 64, unique: [getTasksTitle] }"
+          :rules="{
+            required: true,
+            min: 3,
+            max: 64,
+            unique: [tasksStore.getTasksTitle]
+          }"
           class="input-text"
         />
         <ErrorMessage name="title" class="text-red-600 text-sm" />
@@ -38,7 +43,11 @@
           class="select"
         >
           <option value="" disabled>-- None --</option>
-          <option v-for="user in users" :key="user.id" :value="user.id">
+          <option
+            v-for="user in usersStore.users"
+            :key="user.id"
+            :value="user.id"
+          >
             {{ user.name }}
           </option>
         </VeeField>
@@ -48,45 +57,31 @@
   </div>
 </template>
 
-<script>
-import { mapState, mapActions } from "pinia";
-import { useUsersStore } from "../../store/users";
-import { useTasksStore } from "../../store/tasks";
+<script setup>
+import { ref } from "vue";
 import { nanoid } from "nanoid";
 
-export default {
-  name: "TaskForm",
+import { useUsersStore } from "../../store/users";
+import { useTasksStore } from "../../store/tasks";
 
-  data() {
-    return {
-      title: "",
-      complete: false,
-      assignedTo: ""
-    };
-  },
+const usersStore = useUsersStore();
+const tasksStore = useTasksStore();
 
-  computed: {
-    ...mapState(useUsersStore, ["users"]),
-    ...mapState(useTasksStore, ["getTasksTitle"])
-  },
+const title = ref("");
+const complete = ref(false);
+const assignedTo = ref("");
 
-  methods: {
-    ...mapActions(useTasksStore, ["addTask"]),
-    ...mapActions(useUsersStore, ["addTaskToUser"]),
-
-    addNewTask(_, { resetForm }) {
-      const taskId = nanoid();
-      this.addTask({
-        id: taskId,
-        title: this.title,
-        complete: this.complete,
-        assignedTo: this.assignedTo
-      });
-      this.addTaskToUser({ userId: this.assignedTo, taskId });
-      resetForm();
-    }
-  }
-};
+function addNewTask(_, { resetForm }) {
+  const taskId = nanoid();
+  tasksStore.addTask({
+    id: taskId,
+    title: title.value,
+    complete: complete.value,
+    assignedTo: assignedTo.value
+  });
+  usersStore.addTaskToUser({ userId: assignedTo.value, taskId });
+  resetForm();
+}
 </script>
 
 <style scoped></style>

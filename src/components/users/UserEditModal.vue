@@ -15,7 +15,7 @@
               required: true,
               min: 3,
               max: 64,
-              unique: nameWasChanged ? [getUsersName] : false
+              unique: nameWasChanged ? [usersStore.getUsersName] : false
             }"
             class="input-text"
           />
@@ -29,10 +29,10 @@
                 class="flex py-2 border-solid border-b-2 w-full justify-between"
               >
                 <div>
-                  {{ getTaskById(task).title }}
+                  {{ tasksStore.getTaskById(task)?.title }}
                   <TaskStatusLabel
                     class="ml-4"
-                    :status="getTaskById(task).complete"
+                    :status="tasksStore.getTaskById(task)?.complete"
                   />
                 </div>
                 <button @click="deleteTaskFromList(task)">
@@ -59,7 +59,7 @@
           <button
             type="reset"
             class="btn-secondary"
-            @click="$emit('close-user-modal')"
+            @click="emit('close-user-modal')"
           >
             Cancel
           </button>
@@ -69,97 +69,79 @@
   </BaseModal>
 </template>
 
-<script>
-import { mapState, mapActions } from "pinia";
+<script setup>
+import { ref, defineProps, defineEmits, computed, watchEffect } from "vue";
+
 import { useUsersStore } from "../../store/users";
 import { useTasksStore } from "../../store/tasks";
 
 import BaseModal from "../BaseModal.vue";
 import TaskStatusLabel from "../tasks/TaskStatusLabel.vue";
 
-export default {
-  components: {
-    BaseModal,
-    TaskStatusLabel
+const usersStore = useUsersStore();
+const tasksStore = useTasksStore();
+
+const props = defineProps({
+  showModal: {
+    type: Boolean,
+    default: false
   },
-
-  props: {
-    showModal: {
-      type: Boolean,
-      default: false
-    },
-    userId: {
-      type: String,
-      default: ""
-    },
-    userName: {
-      type: String,
-      default: ""
-    },
-    userTasks: {
-      type: Array,
-      default: () => []
-    }
+  userId: {
+    type: String,
+    default: ""
   },
-
-  data() {
-    return {
-      name: "",
-      tasks: [],
-      tasksToDelete: []
-    };
+  userName: {
+    type: String,
+    default: ""
   },
-
-  watch: {
-    userName() {
-      this.name = this.userName;
-    },
-    userTasks() {
-      this.tasks = this.userTasks;
-    }
-  },
-
-  computed: {
-    ...mapState(useTasksStore, ["getTaskById"]),
-    ...mapState(useUsersStore, ["getUsersName"]),
-
-    nameWasChanged() {
-      return this.name !== this.userName;
-    }
-  },
-
-  methods: {
-    ...mapActions(useUsersStore, ["editUser"]),
-    ...mapActions(useTasksStore, ["unassignTasksFromUser"]),
-
-    deleteTaskFromList(taskId) {
-      this.tasks = this.tasks.filter((task) => task !== taskId);
-      this.tasksToDelete.push(taskId);
-    },
-
-    deleteAssignedTasks() {
-      this.unassignTasksFromUser({
-        userId: this.userId,
-        tasks: this.tasksToDelete
-      });
-      this.tasksToDelete = [];
-    },
-
-    saveUser(_, { resetForm }) {
-      const updatedUser = {
-        id: this.userId,
-        name: this.name,
-        tasks: this.tasks
-      };
-      this.editUser(updatedUser);
-
-      if (this.tasksToDelete.length) {
-        this.deleteAssignedTasks();
-      }
-
-      resetForm();
-      this.$emit("close-user-modal");
-    }
+  userTasks: {
+    type: Array,
+    default: () => []
   }
-};
+});
+
+const emit = defineEmits(["close-user-modal"]);
+
+const name = ref("");
+const tasks = ref([]);
+
+let tasksToDelete = [];
+
+watchEffect(() => {
+  name.value = props.userName;
+  tasks.value = props.userTasks;
+});
+
+const nameWasChanged = computed(() => {
+  return name.value !== props.userName;
+});
+
+function deleteTaskFromList(taskId) {
+  tasks.value = tasks.value.filter((task) => task !== taskId);
+  tasksToDelete.push(taskId);
+}
+
+function deleteAssignedTasks() {
+  tasksStore.unassignTasksFromUser({
+    userId: props.userId,
+    tasks: tasksToDelete
+  });
+  tasksToDelete = [];
+}
+
+function saveUser(_, { resetForm }) {
+  const updatedUser = {
+    id: props.userId,
+    name: name.value,
+    tasks: tasks.value
+  };
+  usersStore.editUser(updatedUser);
+
+  if (tasksToDelete.length) {
+    deleteAssignedTasks();
+  }
+
+  resetForm();
+  emit("close-user-modal");
+}
 </script>

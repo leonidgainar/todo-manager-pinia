@@ -41,13 +41,12 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    showModal: {
-      type: Boolean,
-      default: false
-    }
+<script setup>
+import { defineProps } from "vue";
+defineProps({
+  showModal: {
+    type: Boolean,
+    default: false
   }
-};
+});
 </script>

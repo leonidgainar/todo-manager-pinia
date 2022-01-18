@@ -15,7 +15,7 @@
               required: true,
               min: 3,
               max: 64,
-              unique: titleWasChanged ? [getTasksTitle] : false
+              unique: titleWasChanged ? [tasksStore.getTasksTitle] : false
             }"
             class="input-text"
           />
@@ -45,7 +45,11 @@
               class="select"
             >
               <option value="">-- None --</option>
-              <option v-for="user in users" :key="user.id" :value="user.id">
+              <option
+                v-for="user in usersStore.users"
+                :key="user.id"
+                :value="user.id"
+              >
                 {{ user.name }}
               </option>
             </VeeField>
@@ -56,7 +60,7 @@
           <button
             type="reset"
             class="btn-secondary"
-            @click="$emit('close-task-modal')"
+            @click="emit('close-task-modal')"
           >
             Cancel
           </button>
@@ -66,98 +70,79 @@
   </BaseModal>
 </template>
 
-<script>
-import { mapState, mapActions } from "pinia";
+<script setup>
+import { ref, defineProps, defineEmits, computed, watchEffect } from "vue";
+
 import { useUsersStore } from "../../store/users";
 import { useTasksStore } from "../../store/tasks";
 
 import BaseModal from "../BaseModal.vue";
 
-export default {
-  components: {
-    BaseModal
+const usersStore = useUsersStore();
+const tasksStore = useTasksStore();
+
+const props = defineProps({
+  showModal: {
+    type: Boolean,
+    default: false
   },
-
-  props: {
-    showModal: {
-      type: Boolean,
-      default: false
-    },
-    taskId: {
-      type: String,
-      default: ""
-    },
-    taskTitle: {
-      type: String,
-      default: ""
-    },
-    taskAssignedTo: {
-      type: String,
-      default: ""
-    },
-    taskComplete: {
-      type: Boolean,
-      default: false
-    }
+  taskId: {
+    type: String,
+    default: ""
   },
-
-  data() {
-    return {
-      title: "",
-      assignedTo: "",
-      complete: false
-    };
+  taskTitle: {
+    type: String,
+    default: ""
   },
-
-  watch: {
-    taskTitle() {
-      this.title = this.taskTitle;
-    },
-    taskAssignedTo() {
-      this.assignedTo = this.taskAssignedTo;
-    },
-    taskComplete() {
-      this.complete = this.taskComplete;
-    }
+  taskAssignedTo: {
+    type: String,
+    default: ""
   },
-
-  computed: {
-    ...mapState(useUsersStore, ["users"]),
-    ...mapState(useTasksStore, ["getTasksTitle"]),
-
-    titleWasChanged() {
-      return this.title !== this.taskTitle;
-    }
-  },
-
-  methods: {
-    ...mapActions(useTasksStore, ["editTask"]),
-    ...mapActions(useUsersStore, ["addTaskToUser", "deleteTaskFromUser"]),
-
-    changeTaskAssignedUser() {
-      this.deleteTaskFromUser({
-        userId: this.taskAssignedTo,
-        taskId: this.taskId
-      });
-      this.addTaskToUser({ userId: this.assignedTo, taskId: this.taskId });
-    },
-
-    saveTask(_, { resetForm }) {
-      const updatedTask = {
-        id: this.taskId,
-        title: this.title,
-        assignedTo: this.assignedTo,
-        complete: this.complete || false
-      };
-      this.editTask(updatedTask);
-
-      if (this.assignedTo !== this.taskAssignedTo) {
-        this.changeTaskAssignedUser();
-      }
-
-      resetForm();
-      this.$emit("close-task-modal");
-    }
+  taskComplete: {
+    type: Boolean,
+    default: false
   }
-};
+});
+
+const emit = defineEmits(["close-task-modal"]);
+
+const title = ref("");
+const assignedTo = ref("");
+const complete = ref(false);
+
+watchEffect(() => {
+  title.value = props.taskTitle;
+  assignedTo.value = props.taskAssignedTo;
+  complete.value = props.taskComplete;
+});
+
+const titleWasChanged = computed(() => {
+  return title.value !== props.taskTitle;
+});
+
+function changeTaskAssignedUser() {
+  usersStore.deleteTaskFromUser({
+    userId: props.taskAssignedTo,
+    taskId: props.taskId
+  });
+  usersStore.addTaskToUser({ userId: assignedTo.value, taskId: props.taskId });
+}
+
+function saveTask(_, { resetForm }) {
+  const updatedTask = {
+    id: props.taskId,
+    title: title.value,
+    assignedTo: assignedTo.value,
+    complete: complete.value || false
+  };
+
+  tasksStore.editTask(updatedTask);
+
+  if (assignedTo.value !== props.taskAssignedTo) {
+    changeTaskAssignedUser();
+  }
+
+  resetForm();
+  emit("close-task-modal");
+}
 </script>

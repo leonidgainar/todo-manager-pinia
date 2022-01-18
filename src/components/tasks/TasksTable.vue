@@ -1,5 +1,5 @@
 <template>
-  <div v-if="tasks.length" class="min-w-full sm:px-6 lg:px-4">
+  <div v-if="tasksStore.tasks.length" class="min-w-full sm:px-6 lg:px-4">
     <h1 class="text-2xl font-bold">Tasks</h1>
     <table class="min-w-full table-container">
       <thead class="bg-gray-50">
@@ -14,7 +14,7 @@
         </tr>
       </thead>
       <tbody class="table-body">
-        <tr v-for="task in tasks || []" :key="task.id">
+        <tr v-for="task in tasksStore.tasks || []" :key="task.id">
           <td class="px-6 py-4 text-left">
             <span :title="task.title">
               {{ truncateText(task.title) }}
@@ -23,9 +23,9 @@
           <td class="px-6 py-4 text-left">
             <span
               v-if="task.assignedTo"
-              :title="getUserById(task.assignedTo)?.name"
+              :title="usersStore.getUserById(task.assignedTo)?.name"
             >
-              {{ truncateText(getUserById(task.assignedTo)?.name) }}
+              {{ truncateText(usersStore.getUserById(task.assignedTo)?.name) }}
             </span>
             <span v-else> N/A </span>
           </td>
@@ -59,67 +59,50 @@
   />
 </template>
 
-<script>
-import { mapState, mapActions } from "pinia";
+<script setup>
+import { ref } from "vue";
+
 import { useUsersStore } from "../../store/users";
 import { useTasksStore } from "../../store/tasks";
 
 import TaskStatusLabel from "../tasks/TaskStatusLabel.vue";
 import TaskEditModal from "../tasks/TaskEditModal.vue";
 
-export default {
-  name: "TasksTable",
-  components: {
-    TaskStatusLabel,
-    TaskEditModal
-  },
+const usersStore = useUsersStore();
+const tasksStore = useTasksStore();
 
-  data() {
-    return {
-      tableHeaders: ["title", "assigned to", "status"],
-      currentTask: {
-        id: "",
-        title: "",
-        assignedTo: "",
-        complete: false
-      },
-      showEditModal: false
-    };
-  },
+const tableHeaders = ["title", "assigned to", "status"];
 
-  computed: {
-    ...mapState(useTasksStore, ["tasks"]),
-    ...mapState(useUsersStore, ["getUserById"])
-  },
+const currentTask = ref({
+  id: "",
+  title: "",
+  assignedTo: "",
+  complete: false
+});
+const showEditModal = ref(false);
 
-  methods: {
-    ...mapActions(useTasksStore, ["deleteTask"]),
-    ...mapActions(useUsersStore, ["deleteTaskFromUser"]),
-
-    deleteAndUnassignTask(task) {
-      this.deleteTask(task.id);
-      if (task.assignedTo) {
-        this.deleteTaskFromUser({ taskId: task.id, userId: task.assignedTo });
-      }
-    },
-
-    editTask(task) {
-      this.currentTask = task;
-      this.showEditModal = true;
-    },
-
-    closeEditModal() {
-      this.currentTask = {};
-      this.showEditModal = false;
-    },
-
-    truncateText(text, length = 20, suffix = "...") {
-      if (text.length > length) {
-        return text.substring(0, length) + suffix;
-      } else {
-        return text;
-      }
-    }
+function deleteAndUnassignTask(task) {
+  tasksStore.deleteTask(task.id);
+  if (task.assignedTo) {
+    usersStore.deleteTaskFromUser({ taskId: task.id, userId: task.assignedTo });
   }
-};
+}
+
+function editTask(task) {
+  currentTask.value = task;
+  showEditModal.value = true;
+}
+
+function closeEditModal() {
+  currentTask.value = {};
+  showEditModal.value = false;
+}
+
+function truncateText(text, length = 20, suffix = "...") {
+  if (text.length > length) {
+    return text.substring(0, length) + suffix;
+  } else {
+    return text;
+  }
+}
 </script>

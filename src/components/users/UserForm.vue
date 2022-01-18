@@ -10,7 +10,12 @@
           name="name"
           v-model.trim="name"
           placeholder="Enter the name"
-          :rules="{ required: true, min: 3, max: 64, unique: [getUsersName] }"
+          :rules="{
+            required: true,
+            min: 3,
+            max: 64,
+            unique: [usersStore.getUsersName]
+          }"
           class="input-text"
         />
         <ErrorMessage name="name" class="text-red-600 text-sm" />
@@ -20,32 +25,18 @@
   </div>
 </template>
 
-<script>
-import { mapState, mapActions } from "pinia";
+<script setup>
+import { ref } from "vue";
 import { useUsersStore } from "../../store/users";
 
-export default {
-  name: "UserForm",
+const usersStore = useUsersStore();
 
-  data() {
-    return {
-      name: ""
-    };
-  },
+const name = ref("");
 
-  computed: {
-    ...mapState(useUsersStore, ["getUsersName"])
-  },
-
-  methods: {
-    ...mapActions(useUsersStore, ["addUser"]),
-
-    addNewUser(_, { resetForm }) {
-      this.addUser({ name: this.name, tasks: [] });
-      resetForm();
-    }
-  }
-};
+function addNewUser(_, { resetForm }) {
+  usersStore.addUser({ name: name.value, tasks: [] });
+  resetForm();
+}
 </script>
 
 <style scoped></style>
